@@ -1,0 +1,10 @@
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./*.tsx";
+@theme {
+  --color-card: #fff;
+  --color-card-foreground: #0f172a;
+  --color-background: #fff;
+  --color-muted-foreground: #64748b;
+}

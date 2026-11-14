@@ -1,0 +1,10 @@
+import {useId,useEffect,useRef} from 'react';
+import {X,CheckCircle,WarningCircle} from '@phosphor-icons/react';
+export function Button({variant='',className='',children,onClick,...props}){return <button type="button" className={`button ${variant} ${className}`} onClick={onClick} {...props}>{children}</button>}
+export function Field({label,hint,error,children}){const id=useId();return <div className="field"><label htmlFor={id}>{label}</label>{children(id,!!error,error?`${id}-error`:undefined)}{hint&&<span className="hint">{hint}</span>}{error&&<span className="field-error" id={`${id}-error`}>{error}</span>}</div>}
+export function Input({label,hint,error,...props}){return <Field label={label} hint={hint} error={error}>{(id,bad,described)=><input id={id} aria-invalid={bad} aria-describedby={described} {...props}/>}</Field>}
+export function Multiline({label,hint,error,...props}){return <Field label={label} hint={hint} error={error}>{(id,bad,described)=><textarea className="resize-none" id={id} aria-invalid={bad} aria-describedby={described} style={{resize:'none'}} {...props}/>}</Field>}
+export function Select({label,options,...props}){return <Field label={label}>{id=><select id={id} {...props}>{options.map(option=>{const [value,text]=Array.isArray(option)?option:[option,option];return <option key={value} value={value}>{text}</option>})}</select>}</Field>}
+export function SectionTitle({children,aside}){return <div className="section-title"><h2>{children}</h2>{aside}</div>}
+export function Notice({children,tone='info'}){const Icon=tone==='success'?CheckCircle:WarningCircle;return <div className={`notice ${tone}`}><Icon size={18}/><span>{children}</span></div>}
+export function Modal({title,children,onClose}){const ref=useRef();useEffect(()=>{ref.current.showModal();return()=>ref.current?.close()},[]);return <dialog ref={ref} aria-label={title} onCancel={onClose}><div className="modal-heading"><h2>{title}</h2><Button variant="icon quiet" aria-label="关闭对话框" onClick={onClose}><X size={20}/></Button></div>{children}</dialog>}

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>阅卷随机内容测试</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; color: #243044; background: #edf0f4; }
+    body { margin: 0; padding: 28px 20px; }
+    main { width: 500px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 20px; }
+    .hint { margin: 0 0 18px; color: #536174; font-size: 13px; line-height: 1.7; }
+    #paper { width: 500px; height: 500px; padding: 26px; border: 1px solid #b7c0cb; background: white; color: #171717; overflow: hidden; }
+    .paper-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 12px; border-bottom: 2px solid #222; font-size: 12px; }
+    .paper-head strong { font-size: 18px; }
+    .student { display: flex; justify-content: space-between; margin: 12px 0 18px; font-size: 12px; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    .passage { margin: 0 0 14px; font: 16px/1.9 "SimSun", "Songti SC", serif; text-indent: 2em; }
+    .question { margin: 12px 0 6px; font-size: 14px; line-height: 1.7; }
+    .answer { margin: 6px 0 14px; color: #244a80; font: 17px/1.8 "KaiTi", "STKaiti", serif; }
+    .subject { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    select { height: 36px; padding: 0 10px; font: inherit; border: 1px solid #9daaba; border-radius: 5px; background: white; cursor: pointer; }
+    select:focus-visible, summary:focus-visible { outline: 2px solid #2859a8; outline-offset: 2px; }
+    details { margin-top: 14px; padding: 14px; border: 1px solid #b7c0cb; background: white; font-size: 14px; line-height: 1.8; }
+    summary { cursor: pointer; font-weight: bold; }
+    summary:hover { color: #2859a8; }
+    #reference p { margin: 10px 0 0; }
+    .answer { white-space: pre-line; }
+    form { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+    label { font-size: 14px; white-space: nowrap; }
+    input { min-width: 0; flex: 1; height: 42px; border: 1px solid #9daaba; border-radius: 5px; padding: 0 12px; font: inherit; background: white; }
+    input:focus { outline: 2px solid #2859a8; outline-offset: 2px; }
+    #status { min-height: 22px; margin: 12px 0 0; color: #536174; font-size: 12px; }
+    /* 测试区始终保持 500 × 500 CSS 像素，小屏幕横向滚动，不缩放。 */
+    @media (max-width: 540px) { main { margin: 0; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>阅卷随机内容测试</h1>
+    <p class="hint">同一道题，不同学生作答。回车只换学生和答案；切换科目才更换题目。</p>
+    <div class="subject">
+      <label for="subject">固定题目</label>
+      <select id="subject">
+        <option value="politics">政治：绿色生活（10分）</option>
+        <option value="math">数学：解一元一次方程（5分）</option>
+      </select>
+    </div>
+    <section id="paper" aria-label="随机试卷内容"></section>
+    <form id="form" autocomplete="off">
+      <label for="entry">测试输入</label>
+      <input id="entry" type="text" placeholder="输入分数或任意内容，按回车看下一位学生" autofocus>
+    </form>
+    <p id="status" role="status" aria-live="polite"></p>
+    <details>
+      <summary>查看标准答案与评分要点（在500px测试区外）</summary>
+      <div id="reference"></div>
+    </details>
+  </main>
+  <script>
+    const paper = document.getElementById('paper');
+    const entry = document.getElementById('entry');
+    const status = document.getElementById('status');
+    const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const pick = values => values[random(0, values.length - 1)];
+    const names = ['林晓', '陈一帆', '李明', '王小雨', '周晨', '赵子涵', '许安', '刘思远'];
+    const subject = document.getElementById('subject');
+    const reference = document.getElementById('reference');
+    const topics = {
+      politics: {
+        title: '政治 · 绿色生活',
+        material: '某社区开展垃圾分类、旧物交换和节水节电活动。居民积极参与，逐渐形成节约资源、保护环境的生活习惯。',
+        question: '结合材料，说明青少年应如何践行绿色生活方式。（10分）',
+        standard: '①树立节约资源、保护环境的意识。②落实垃圾分类，减少一次性用品。③节水节电，养成节约习惯。④积极参与环保宣传和社区环保实践。',
+        rubric: '环保意识3分；垃圾分类或减少一次性用品3分；节水节电2分；参与环保宣传或实践2分。同义表达可得分，各点不重复计分，总分10分。',
+        points: [
+          ['我们应该树立节约资源、保护环境的意识。', '首先要认识到保护环境的重要性，自觉珍惜资源。'],
+          ['日常生活中做好垃圾分类，少用一次性用品。', '把垃圾按类别投放，外出自带购物袋，减少一次性用品。'],
+          ['随手关灯、关水龙头，节约用水用电。', '养成节约习惯，不浪费水和电。'],
+          ['积极参加社区环保活动，并向身边的人宣传环保知识。', '参与旧物交换和社区环保实践，带动家人一起行动。']
+        ]
+      },
+      math: {
+        title: '数学 · 解一元一次方程',
+        material: '',
+        question: '解方程：3x + 7 = 28。（5分）',
+        standard: '3x = 28 − 7 = 21；x = 21 ÷ 3 = 7。检验：3 × 7 + 7 = 28，所以 x = 7。',
+        rubric: '正确移项得到3x = 28 − 7，2分；计算得到3x = 21，1分；两边除以3得x = 7，2分。只有正确结果、没有过程，按本测试规则给2分；错误步骤不得分，不因碰巧得到正确结果补过程分。总分5分。',
+        answers: [
+          '解：3x = 28 − 7\n3x = 21\nx = 7',
+          '解：两边同时减去7，得3x = 21。\n两边再同时除以3，得x = 7。',
+          '解：3x = 28 − 7 = 21\nx = 21 ÷ 3 = 7\n检验：3 × 7 + 7 = 28。',
+          '解：3x = 28 − 7\n3x = 21',
+          '解：3x = 28 − 7',
+          'x = 7',
+          '解：3x = 28 + 7 = 35\nx = 35 ÷ 3',
+          '解：3x = 28 − 7 = 21\nx = 21 − 3 = 18',
+          '解：x = 28 − 7 = 21',
+          '解：3x = 21\nx = 6',
+          '不会做。'
+        ]
+      }
+    };
+    let count = 0;
+    let previousAnswer = '';
+
+    function makeAnswer(topic) {
+      if (topic.answers) return pick(topic.answers);
+      // 同一材料的不同作答：覆盖完整、部分、错误及空白答案。
+      const mask = random(0, 15);
+      if (mask === 0) return pick(['环保都是大人的事，和我们无关。', '只要多买新东西，就能保护环境。', '（未作答）']);
+      const points = topic.points.filter((_, i) => mask & (1 << i));
+      // 随机排列得分点，模拟学生不同的表达顺序。
+      for (let i = points.length - 1; i > 0; i--) {
+        const j = random(0, i);
+        [points[i], points[j]] = [points[j], points[i]];
+      }
+      return points.map(point => pick(point)).join('');
+    }
+
+    function refresh() {
+      count += 1;
+      const topic = topics[subject.value];
+      let answer = makeAnswer(topic);
+      // 连续两份保证作答不同，避免看起来没有换卷。
+      if (answer === previousAnswer) {
+        answer = topic.answers
+          ? topic.answers[(topic.answers.indexOf(answer) + 1) % topic.answers.length]
+          : (answer === '（未作答）' ? '环保都是大人的事，和我们无关。' : '（未作答）');
+      }
+      previousAnswer = answer;
+      const header = `<div class="paper-head"><strong>${topic.title}</strong><span>样本 ${String(count).padStart(4, '0')}</span></div>
+        <div class="student"><span>姓名：${pick(names)}</span><span>班级：1班</span><span>学号：${String(count).padStart(4, '0')}</span></div>`;
+      paper.innerHTML = header +
+        (topic.material ? `<p class="passage">${topic.material}</p>` : '') +
+        `<p class="question">${topic.question}</p><h2>学生作答</h2><p class="answer">${answer}</p>`;
+      reference.innerHTML = `<p><strong>标准答案：</strong>${topic.standard}</p><p><strong>评分要点：</strong>${topic.rubric}</p>`;
+      status.textContent = `500 × 500 px · 第 ${count} 位学生 · 题目固定，回车看下一份作答`;
+    }
+
+    subject.addEventListener('change', () => {
+      count = 0;
+      previousAnswer = '';
+      refresh();
+      entry.value = '';
+      entry.focus();
+    });
+
+    // 中文输入法选字的回车不触发换页。
+    let composing = false;
+    entry.addEventListener('compositionstart', () => { composing = true; });
+    entry.addEventListener('compositionend', () => { composing = false; });
+    entry.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && (event.isComposing || composing || event.keyCode === 229)) {
+        event.preventDefault();
+      }
+    });
+    document.getElementById('form').addEventListener('submit', event => {
+      event.preventDefault();
+      if (composing) return;
+      refresh();
+      entry.value = '';
+      entry.focus();
+    });
+    refresh();
+  </script>
+</body>
+</html>

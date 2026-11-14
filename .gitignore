@@ -1,0 +1,28 @@
+# Third-party dependencies and runtimes
+node_modules/
+.inspection/python310/
+.venv/
+venv/
+
+# Generated build output and caches
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.tmp
+*.TMP
+*.log
+.playwright-mcp/
+
+# Local credentials and user data
+.env
+.env.*
+!.env.example
+models.dat
+阅卷台数据.json
+WebView2/
+WebView2-smoke/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
