@@ -88,7 +88,7 @@ test('normal grading entry sends reference and short numeric answers and accepts
   }
  }}};
  try {
-  const task={subject:'数学',reference:'答案：2；本题2分',recognized:'2'};
+  const task={subject:'数学',reference:'答案：2；本题2分',recognized:'2',maxScore:2};
   const result=await gradeText(task,defaultTeacher,{...initialSettings.grading,apiKey:'test'});
   assert.equal(result.score,2);
   assert.equal(JSON.parse(sent.messages[1].content).学生识别内容,'2');

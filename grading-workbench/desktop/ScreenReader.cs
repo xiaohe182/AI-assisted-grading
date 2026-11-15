@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -62,32 +63,74 @@ internal sealed class RegionPicker : Form
     }
 }
 
-// The visible pixels sit outside the capture rectangle so OCR never sees the label.
+// Only the border and toolbar own pixels; the selected answer stays click-through.
 internal sealed class RegionMarker : Form
 {
-    public RegionMarker(Rectangle selection)
-    {
-        AutoScaleMode=AutoScaleMode.None;
-        FormBorderStyle=FormBorderStyle.None;
-        StartPosition=FormStartPosition.Manual;
-        ShowInTaskbar=false; TopMost=true;
-        int top=selection.Top-SystemInformation.VirtualScreen.Top>=22 ? 22 : 2;
-        Bounds=new Rectangle(selection.Left-2,selection.Top-top,Math.Max(82,selection.Width+4),selection.Height+top+(top==2?22:2));
-        BackColor=Color.Firebrick;
-        var rim=new Region(new Rectangle(0,top-2,selection.Width+4,selection.Height+4));
-        rim.Exclude(new Rectangle(2,top,selection.Width,selection.Height));
-        var label=new Label {Text="OCR 选区", ForeColor=Color.White, BackColor=BackColor,
-            Bounds=new Rectangle(0,top==2?selection.Height+4:0,80,20),TextAlign=ContentAlignment.MiddleCenter};
-        rim.Union(label.Bounds);
-        Region=rim; Controls.Add(label);
+    public event Action CloseRequested;
+    public event Action ReselectRequested;
+    public readonly Button CloseButton,ReselectButton;
+    public Rectangle CaptureBounds {get;private set;}
+    public bool ToolbarOverlapsSelection {get;private set;}
+    readonly Label status;
+    readonly Rectangle toolbar;
+    public RegionMarker(Rectangle selection) {
+        AutoScaleMode=AutoScaleMode.None;FormBorderStyle=FormBorderStyle.None;
+        StartPosition=FormStartPosition.Manual;ShowInTaskbar=false;TopMost=true;DoubleBuffered=true;
+        BackColor=Color.Black;TransparencyKey=Color.Black;Opacity=.99;
+        var screen=Screen.FromRectangle(selection).Bounds;
+        int barWidth=Math.Min(470,screen.Width),barHeight=44;
+        int barX=Math.Max(screen.Left,Math.Min(selection.Left,screen.Right-barWidth));
+        int barY=selection.Top-58>=screen.Top?selection.Top-58:selection.Bottom+58<=screen.Bottom?selection.Bottom+14:Math.Max(screen.Top,selection.Top);
+        var barScreen=new Rectangle(barX,barY,barWidth,barHeight);
+        var outer=Rectangle.Inflate(selection,14,14);
+        Bounds=Rectangle.Union(outer,barScreen);
+        CaptureBounds=new Rectangle(selection.X-Left,selection.Y-Top,selection.Width,selection.Height);
+        toolbar=new Rectangle(barX-Left,barY-Top,barWidth,barHeight);
+        ToolbarOverlapsSelection=barScreen.IntersectsWith(selection);
+        var rim=new Region(new Rectangle(outer.X-Left,outer.Y-Top,outer.Width,outer.Height));
+        rim.Exclude(CaptureBounds);rim.Union(toolbar);Region=rim;
+        Font=new Font("Microsoft YaHei UI",9f);
+        var title=new Label {Text="OCR 选区",ForeColor=Color.FromArgb(207,250,254),BackColor=Color.FromArgb(8,22,46),TextAlign=ContentAlignment.MiddleLeft,Bounds=new Rectangle(toolbar.X+15,toolbar.Y+7,90,30)};
+        status=new Label {Text="选区已就绪",ForeColor=Color.FromArgb(45,212,191),BackColor=title.BackColor,TextAlign=ContentAlignment.MiddleLeft,Bounds=new Rectangle(toolbar.X+105,toolbar.Y+7,95,30)};
+        ReselectButton=MakeButton("重选区域",new Rectangle(toolbar.Right-262,toolbar.Y+7,100,30),Color.FromArgb(34,211,238));
+        CloseButton=MakeButton("关闭 OCR 选区",new Rectangle(toolbar.Right-152,toolbar.Y+7,137,30),Color.FromArgb(251,113,133));
+        ReselectButton.Click+=(o,e)=>RequestReselect();CloseButton.Click+=(o,e)=>RequestClose();
+        Controls.AddRange(new Control[]{title,status,ReselectButton,CloseButton});
     }
-    protected override bool ShowWithoutActivation {get {return true;}}
-    protected override CreateParams CreateParams {
-        get {var cp=base.CreateParams; cp.ExStyle|=0x08000000|0x00000020|0x00080000; return cp;}
+    public void RequestClose(){if(CloseRequested!=null)CloseRequested();}
+    public void RequestReselect(){if(ReselectRequested!=null)ReselectRequested();}
+    public void SetScanning(bool scanning){status.Text=scanning?"正在识别":"选区已就绪";}
+    static Button MakeButton(string text,Rectangle bounds,Color color){
+        var button=new Button {Text=text,Bounds=bounds,FlatStyle=FlatStyle.Flat,ForeColor=color,BackColor=Color.FromArgb(12,28,53),Cursor=Cursors.Hand,TabStop=false};
+        button.FlatAppearance.BorderColor=color;button.FlatAppearance.MouseOverBackColor=Color.FromArgb(25,49,79);return button;
     }
+    protected override void OnPaint(PaintEventArgs e){
+        base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
+        var r=Rectangle.Inflate(CaptureBounds,4,4);
+        using(var glow=new Pen(Color.FromArgb(8,55,81),10))g.DrawRectangle(glow,r);
+        using(var line=new Pen(Color.FromArgb(34,211,238),1))g.DrawRectangle(line,r);
+        using(var violet=new Pen(Color.FromArgb(139,92,246),1))g.DrawRectangle(violet,Rectangle.Inflate(r,5,5));
+        int arm=Math.Min(30,Math.Min(r.Width,r.Height)/3);
+        using(var pen=new Pen(Color.FromArgb(18,238,255),5)){
+            g.DrawLines(pen,new[]{new Point(r.Left,r.Top+arm),new Point(r.Left,r.Top),new Point(r.Left+arm,r.Top)});
+            g.DrawLines(pen,new[]{new Point(r.Right-arm,r.Top),new Point(r.Right,r.Top),new Point(r.Right,r.Top+arm)});
+            g.DrawLines(pen,new[]{new Point(r.Left,r.Bottom-arm),new Point(r.Left,r.Bottom),new Point(r.Left+arm,r.Bottom)});
+            g.DrawLines(pen,new[]{new Point(r.Right-arm,r.Bottom),new Point(r.Right,r.Bottom),new Point(r.Right,r.Bottom-arm)});
+        }
+        using(var ticks=new Pen(Color.FromArgb(34,211,238),2))
+            for(int i=0;i<8 && r.Width>180;i++){int x=r.Left+65+i*6;g.DrawLine(ticks,x,r.Top-8,x+3,r.Top-5);g.DrawLine(ticks,x,r.Bottom+5,x+3,r.Bottom+8);}
+        using(var node=new SolidBrush(Color.FromArgb(165,243,252))){g.FillRectangle(node,r.Left+r.Width/2-3,r.Top-3,6,6);g.FillRectangle(node,r.Left+r.Width/2-3,r.Bottom-3,6,6);}
+        using(var bg=new SolidBrush(Color.FromArgb(8,22,46)))g.FillPolygon(bg,Bevel(toolbar));
+        using(var edge=new Pen(Color.FromArgb(34,211,238),1))g.DrawPolygon(edge,Bevel(toolbar));
+    }
+    static Point[] Bevel(Rectangle r){return new[]{new Point(r.Left+12,r.Top),new Point(r.Right-12,r.Top),new Point(r.Right,r.Top+12),new Point(r.Right,r.Bottom-12),new Point(r.Right-12,r.Bottom),new Point(r.Left+12,r.Bottom),new Point(r.Left,r.Bottom-12),new Point(r.Left,r.Top+12)};}
+    protected override bool ShowWithoutActivation {get{return true;}}
+    protected override CreateParams CreateParams {get{var cp=base.CreateParams;cp.ExStyle|=0x08000000|0x00080000|0x80;return cp;}}
+    protected override void WndProc(ref Message m){if(m.Msg==0x21){m.Result=new IntPtr(3);return;}base.WndProc(ref m);}
 }
 internal sealed class ScreenReader
 {
+    [DllImport("dwmapi.dll")] static extern int DwmFlush();
     [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point p);
     [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr hwnd,uint flag);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
@@ -97,15 +140,33 @@ internal sealed class ScreenReader
     Rectangle region;
     IntPtr target;
     RegionMarker marker;
+    OcrScanOverlay scanner;
+    public event Action<string> RegionEvent;
+    public void CloseRegion(){
+        Stop();region=Rectangle.Empty;previous=null;target=IntPtr.Zero;
+        if(marker!=null){marker.Dispose();marker=null;}
+        if(RegionEvent!=null)RegionEvent("regionClosed");
+    }
+    public void SetScanning(bool enabled) {
+        if(marker!=null&&!marker.IsDisposed){marker.SetScanning(enabled);if(!marker.Visible)marker.Show();}
+        if(scanner!=null){scanner.Dispose();scanner=null;}
+        if(enabled && !region.IsEmpty && !capturing){scanner=new OcrScanOverlay(region,target);scanner.Start();}
+    }
     public System.Threading.CancellationTokenSource Active = new System.Threading.CancellationTokenSource();
-    public void Stop(){Active.Cancel();Active=new System.Threading.CancellationTokenSource();}
+    public void Stop(){SetScanning(false);Active.Cancel();Active=new System.Threading.CancellationTokenSource();}
     string previous;
     bool capturing;
     static IntPtr Root(Point p) { return GetAncestor(WindowFromPoint(p),2); }
-    public ScreenReader(Form window) { owner=window; owner.FormClosed+=(s,e)=>{Active.Cancel();if(marker!=null)marker.Dispose();}; }
+    public ScreenReader(Form window) { owner=window; owner.FormClosed+=(s,e)=>{SetScanning(false);Active.Cancel();if(marker!=null)marker.Dispose();}; }
 
     string Snapshot(bool waitForInk = false)
     {
+        bool hadScanner=scanner!=null;
+        SetScanning(false); // Never include the visual effect in an OCR screenshot.
+        bool hiddenMarker=marker!=null && marker.ToolbarOverlapsSelection && marker.Visible;
+        if(hiddenMarker)marker.Hide();
+        if(hadScanner||hiddenMarker)DwmFlush();
+        try {
         var middle = new Point(region.Left+region.Width/2,region.Top+region.Height/2);
         if (target==IntPtr.Zero || Root(middle)!=target || !SystemInformation.VirtualScreen.Contains(region))
             throw new Exception("答卷窗口或位置已改变，请重新框选");
@@ -130,6 +191,8 @@ internal sealed class ScreenReader
             }
         }
     }
+        finally {if(marker!=null&&!marker.IsDisposed&&!marker.Visible)marker.Show();}
+    }
     public async Task<string> Execute(string action,string score)
     {
         if(capturing) throw new Exception("正在操作选区");
@@ -141,6 +204,7 @@ internal sealed class ScreenReader
             token.ThrowIfCancellationRequested();
             if(selecting)
             {
+                SetScanning(false);
                 owner.Hide();
                 await Task.Delay(160,token);
                 if(marker!=null)marker.Hide();
@@ -159,6 +223,8 @@ internal sealed class ScreenReader
                     region=rect; target=hwnd; previous=null;
                     if(marker!=null)marker.Dispose();
                     marker=new RegionMarker(region);
+                    marker.CloseRequested+=CloseRegion;
+                    marker.ReselectRequested+=()=>{Stop();if(RegionEvent!=null)RegionEvent("reselectRegion");};
                     return "selected";
                 }
             }

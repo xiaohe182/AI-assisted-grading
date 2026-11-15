@@ -26,3 +26,11 @@ WebView2-smoke/
 # Editor and OS files
 .DS_Store
 Thumbs.db
+
+# Local UI verification artifacts
+.playwright-cli/
+/grading-workbench/tests/scan-test.exe
+/grading-workbench/datav-frame-check.png
+/grading-workbench/scan-animation-check.png
+/grading-workbench/scan-diagonal-check.png
+/scan-diagonal-check.png

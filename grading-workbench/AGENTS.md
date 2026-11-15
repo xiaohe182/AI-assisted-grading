@@ -40,3 +40,20 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - OCR display removes LaTeX math delimiters, converts common math operators and preserves block-formula line breaks. Preserve original numeric answers, including incorrect calculations.
 
 - Settings UI is compact: no duplicate page heading, one model panel, paired provider/model fields, compact teacher navigation and a single storage directory row.
+
+- Rubric maximum is extracted only from the reference/scoring-standard field and displayed as an editable input beside its heading. Manual overrides take precedence; a reference edit resets extraction. Never derive the maximum from student OCR or the grading response.
+- Grading prompts must require numeric scores and forbid null. Retry invalid model scores once without the old missing-question/expand-OCR popup; never fabricate a score when both responses are invalid.
+
+- Always use the configured grading model to interpret rubric maximum, including explicit totals. Do not hardcode examples, precedence rules, keyword extraction, or local summation to decide the maximum. The model interprets the whole rubric. Require a positive maximum before grading and enforce every score within [0, maximum].
+
+- On score submission, clear the image and OCR text in the same UI update while Enter is sent. Retain the last grading score as “上次得分” until a new score is available; zero is a valid visible score. Display the diagonal cyan glow on the actual desktop OCR selection during recognition, never inside the workbench preview. OCR result area remains empty until recognized text arrives; no analysis text, placeholder or skeleton. Remove the native glow before any screenshot, on result, cancellation, failure or close.
+
+- Keep a persistent blue OCR selection frame with a dark label outside the screenshot bounds. Native glow starts visibly on its first frame and completes a sweep in about 0.55 seconds, independent of OCR network duration.
+
+- Approved visual target: design/ocr-datav-approved.png. Use cyan/violet DataV frame corners, chamfered dark floating toolbar with reselect and close actions, and a bright diagonal beam with trails and particles. Closing the selection cancels recognition, clears capture state, removes all overlays, and synchronizes both native and workbench controls.
+
+- Automatic score entry has a muted exclamation-circle icon beside the checkbox. Hover/focus reveals “聚焦输入框才能完成自动填分”; do not show the hint as persistent inline text.
+
+- Initial window size: 38% of the current monitor working-area width (at least 400 px initially) and 95% of its height, centered. The 400 px fallback is not a minimum resize constraint.
+
+- Narrow workbench uses shadcn-style quiet shadows and responsive grid: full-width headings, a separate compact maximum-score row with icon refresh, stacked answer/OCR areas below 700 px (two columns above), and a sticky two-column action footer. Under 600 px hide the sidebar and expose settings/workbench navigation in the top bar; preserve 14px typography and all actions.

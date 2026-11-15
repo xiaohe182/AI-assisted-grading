@@ -15,7 +15,7 @@ try {
     if ($LASTEXITCODE) { throw '界面构建失败' }
     Copy-Item dist/client "$stage/client" -Recurse
     Copy-Item "$sdk/lib/net462/Microsoft.Web.WebView2.Core.dll","$sdk/lib/net462/Microsoft.Web.WebView2.WinForms.dll","$sdk/runtimes/win-x64/native/WebView2Loader.dll" $stage
-    & $compiler /nologo /target:library /platform:x64 "/out:$stage/Workbench.dll" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Net.Http.dll /r:System.Security.dll /r:System.Web.Extensions.dll "/r:$stage/Microsoft.Web.WebView2.Core.dll" "/r:$stage/Microsoft.Web.WebView2.WinForms.dll" "$PSScriptRoot\Workbench.cs" "$PSScriptRoot\ModelRequest.cs" "$PSScriptRoot\ScreenReader.cs"
+    & $compiler /nologo /target:library /platform:x64 "/out:$stage/Workbench.dll" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Net.Http.dll /r:System.Security.dll /r:System.Web.Extensions.dll "/r:$stage/Microsoft.Web.WebView2.Core.dll" "/r:$stage/Microsoft.Web.WebView2.WinForms.dll" "$PSScriptRoot\Workbench.cs" "$PSScriptRoot\ModelRequest.cs" "$PSScriptRoot\ScreenReader.cs" "$PSScriptRoot\OcrScanOverlay.cs"
     if ($LASTEXITCODE) { throw '窗口编译失败' }
     Compress-Archive "$stage/*" "$stage.zip"
     $output = Join-Path $stage '阅卷台.exe'

@@ -47,6 +47,8 @@ internal static class ModelRequest
                         content = "ok";
                     }
                 }
+                else if(action=="startScan" || action=="stopScan"){screen.SetScanning(action=="startScan");content="ok";}
+                else if(action=="closeRegion"){screen.CloseRegion();content="ok";}
                 else if(action=="stop"){screen.Stop();content="ok";}
                 else {
                 if(action!="selectRegion" && action!="captureRegion" && action!="nextRegion" && action!="submitScore")

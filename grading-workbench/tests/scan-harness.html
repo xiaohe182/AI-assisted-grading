@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>OCR 选区交互测试</title><div id="root"></div><script>
+const handlers=new Set();const send=(id,content)=>handlers.forEach(h=>h({data:{id,content}}));
+window.chrome=window.chrome||{};
+window.chrome.webview={addEventListener:(_,h)=>handlers.add(h),removeEventListener:(_,h)=>handlers.delete(h),postMessage:r=>{
+ const reply=content=>queueMicrotask(()=>send(r.id,content));
+ if(r.action==='loadModels')return reply(JSON.stringify({ocr:{apiKey:'mock'},grading:{provider:'custom',model:'mock',url:'https://example.test',apiKey:'mock'}}));
+ if(r.action==='selectRegion')return reply('selected');
+ if(r.action==='captureRegion')return reply('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1kAAAAASUVORK5CYII=');
+ if(r.action==='nextRegion')return;
+ if(r.action)return reply('ok');
+ const body=JSON.parse(r.body);
+ if(body.model==='qwen-vl-ocr')return reply(JSON.stringify({choices:[{message:{content:'节约资源，保护环境。'}}]}));
+ reply(JSON.stringify({choices:[{message:{content:body.messages[0].content.includes('判断本次评分的满分')?'10':'8'}}]}));
+}};
+</script><script type="module" src="/src/main.jsx"></script></html>
